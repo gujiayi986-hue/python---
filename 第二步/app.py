@@ -181,7 +181,7 @@ try:
             '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
             '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
             '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-            'simhei.ttf'  # Windows 字体，云端没有但保留备用
+            'simhei.ttf' ,None # Windows 字体，云端没有但保留备用,None
         ]
         font_path = None
         for fp in font_paths:
