@@ -1,0 +1,10 @@
+streamlit
+plotly
+pandas
+jieba
+snownlp
+wordcloud
+scikit-learn
+numpy
+matplotlib
+pillow
