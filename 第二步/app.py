@@ -198,7 +198,6 @@ try:
         st.pyplot(fig)
     except (OSError, ValueError, Exception) as e:
         # 如果字体加载失败，降级为高频词柱状图
-        st.warning("⚠️ 词云生成失败（可能缺少中文字体），自动切换到高频词柱状图展示。")
         # 使用 jieba 分词并统计词频
         import jieba
         from collections import Counter
