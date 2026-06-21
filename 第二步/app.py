@@ -168,34 +168,59 @@ text = ' '.join(df['content'].astype(str))
 # 只保留中文、字母、数字，去掉标点和特殊符号
 text = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9]', ' ', text)
 
-# 尝试导入词云库，如果没装则用柱状图替代
+# 尝试导入词云库，如果没装或出错则用柱状图替代
 try:
     from wordcloud import WordCloud
     import matplotlib.pyplot as plt
     
-    # 生成词云
-    wordcloud = WordCloud(font_path='simhei.ttf', width=800, height=400, background_color='white', max_words=100).generate(text)
-    
-    # 在 Streamlit 中显示
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.imshow(wordcloud, interpolation='bilinear')
-    ax.axis('off')
-    st.pyplot(fig)
-    
+    # 【关键修复】尝试查找系统自带的中文字体
+    try:
+        import os
+        # 常见 Linux 中文字体路径
+        font_paths = [
+            '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
+            '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+            'simhei.ttf'  # Windows 字体，云端没有但保留备用
+        ]
+        font_path = None
+        for fp in font_paths:
+            if os.path.exists(fp):
+                font_path = fp
+                break
+        # 如果没有找到任何字体，使用 None（可能显示方块，但不会报错）
+        wordcloud = WordCloud(font_path=font_path, width=800, height=400, background_color='white', max_words=100).generate(text)
+        
+        # 显示词云
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.imshow(wordcloud, interpolation='bilinear')
+        ax.axis('off')
+        st.pyplot(fig)
+    except (OSError, ValueError, Exception) as e:
+        # 如果字体加载失败，降级为高频词柱状图
+        st.warning("⚠️ 词云生成失败（可能缺少中文字体），自动切换到高频词柱状图展示。")
+        # 使用 jieba 分词并统计词频
+        import jieba
+        from collections import Counter
+        words = jieba.lcut(text)
+        stopwords = set(['的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一', '一个', '上', '也', '很', '到', '说', '要', '去', '你', '会', '着', '没有', '看', '好', '自己', '这'])
+        words = [w for w in words if len(w) > 1 and w not in stopwords]
+        word_counts = Counter(words).most_common(20)
+        word_df = pd.DataFrame(word_counts, columns=['词语', '频次'])
+        fig2 = px.bar(word_df, x='词语', y='频次', title='新闻高频词汇 TOP 20', color='频次', color_continuous_scale='Viridis')
+        st.plotly_chart(fig2, use_container_width=True)
+        
 except ImportError:
-    # 如果没装 wordcloud，自动降级为高频词柱状图（同样好看）
+    # 如果 wordcloud 库没安装，降级为柱状图
     st.info("💡 检测到未安装 wordcloud，自动切换为高频词柱状图（效果一样好）")
     try:
         import jieba
-        # 分词并统计词频
-        words = jieba.lcut(text)
-        # 过滤单字和常见无意义词
-        stopwords = set(['的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一', '一个', '上', '也', '很', '到', '说', '要', '去', '你', '会', '着', '没有', '看', '好', '自己', '这','当地时间','他','她','秒','月','日'])
-        words = [w for w in words if len(w) > 1 and w not in stopwords]
         from collections import Counter
+        words = jieba.lcut(text)
+        stopwords = set(['的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一', '一个', '上', '也', '很', '到', '说', '要', '去', '你', '会', '着', '没有', '看', '好', '自己', '这'])
+        words = [w for w in words if len(w) > 1 and w not in stopwords]
         word_counts = Counter(words).most_common(20)
         word_df = pd.DataFrame(word_counts, columns=['词语', '频次'])
-        
         fig2 = px.bar(word_df, x='词语', y='频次', title='新闻高频词汇 TOP 20', color='频次', color_continuous_scale='Viridis')
         st.plotly_chart(fig2, use_container_width=True)
     except:
